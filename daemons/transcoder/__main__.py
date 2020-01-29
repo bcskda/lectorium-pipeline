@@ -1,3 +1,24 @@
+"""Transcoder daemon
+
+Example:
+(venv) $ python -m daemons.transcoder 2>/dev/null &
+(venv) $ nc -N localhost 1337 | jq << _DOC
+[{
+    "inputs": [
+        ["input_dir/PRIVATE/AVCHD/BDMV/STREAM/00000.MTS"]
+    ],
+    "outputs": [
+        "output_dir/00000.mp4"
+    ],
+    "profile": "concat_copy"
+}]
+_DOC
+
+Output:
+{"error": 0, "result": {"accept": [0], "discard": []}}
+"""
+
+
 import json
 import socketserver
 import threading
