@@ -3,3 +3,4 @@ google-auth-httplib2
 google-auth-oauthlib
 httplib2==0.15.0
 progressbar2
+pyudev

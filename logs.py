@@ -7,7 +7,7 @@ def setup_logger(logger):
     
     handler = logging.StreamHandler()
     handler.setFormatter(formatter)
-    handler.setLevel(logging.INFO)
+    handler.setLevel(logging.DEBUG)
     
     logger.addHandler(handler)
-    logger.setLevel(logging.INFO)
+    logger.setLevel(logging.DEBUG)
