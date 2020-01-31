@@ -1,5 +1,5 @@
 import socketserver
-from queue import Queue
+import queue
 from threading import Thread
 
 
@@ -24,7 +24,6 @@ class BaseDaemon:
             srv_thread = Thread(target=srv.serve_forever)
             srv_thread.start()
             self._threads.append(srv_thread)
-
     def shutdown(self):
         if not self._threads:
             raise RuntimeError("Not started")
@@ -43,7 +42,7 @@ class JobQueueDaemon(BaseDaemon):
         executor_cls.shutdown method should block until executor_cls.run finishes
         """
         super(JobQueueDaemon, self).__init__()
-        self.job_queue = Queue()
+        self.job_queue = queue.Queue()
         self.executor = executor_cls(self.job_queue, *args, **kwargs)
         self._executor_thread = None
     
@@ -61,3 +60,33 @@ class JobQueueDaemon(BaseDaemon):
         self._executor_thread = Thread(target=self.executor.run)
         self._executor_thread.start()
         super(JobQueueDaemon, self).start()
+
+class BaseQueueExecutor:
+    def __init__(self, job_queue: queue.Queue, poll_interval=0.5):
+        self._running = False
+        self._shutdown_requested = False
+        self._poll_interval = poll_interval
+        self.job_queue = job_queue
+
+    def handle_job(self, job):
+        raise NotImplementedError()
+
+    def run(self):
+        self._running = True # thread-safety left
+        while not self._shutdown_requested:
+            try:
+                job = self.job_queue.get(timeout=self._poll_interval)
+            except queue.Empty:
+                continue
+            try:
+                self.handle_job(job)
+            except Exception as e:
+                print(f"[BaseQueueExecutor] Unhandled exception: {e}")
+        self._running = False
+
+    def shutdown(self):
+        self._shutdown_requested = True
+        while self._running:
+            time.sleep(self._poll_interval)
+        self._shutdown_requested = False
+        print("BaseQueueExecutor shutdown finished")
