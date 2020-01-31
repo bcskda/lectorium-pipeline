@@ -27,7 +27,7 @@ from threading import Thread
 from typing import Dict
 from config import Config
 from transcode_v2 import transcode, TranscodeError, validate_args
-from daemons.abc import JobQueueDaemon
+from daemons.abc import BaseQueueExecutor, JobQueueDaemon
 
 
 class TranscodeRequestHandler(socketserver.StreamRequestHandler):
@@ -71,31 +71,8 @@ class TranscodeJob:
         
         validate_args(self.inputs, self.outputs, self.profile)
 
-class TranscodeExecutor:
-    def __init__(self, transcode_queue: queue.Queue, poll_interval=0.5):
-        self._running = False
-        self._shutdown_requested = False
-        self._poll_interval = poll_interval
-        self.transcode_queue = transcode_queue
-
-    def run(self):
-        self._running = True # thread-safety left
-        while not self._shutdown_requested:
-            try:
-                try:
-                    job = self.transcode_queue.get(timeout=self._poll_interval)
-                except queue.Empty:
-                    continue
-                with open(f"{job.outputs[0]}.transcode_log", "w") as stderr:
-                    transcode(job.profile, job.inputs, job.outputs, stderr=stderr)
-                    # TODO report progress
-            except Exception as e:
-                print(f"[TranscodeExecutor] Unhandled exception: {e}", file=sys.stderr)
-        self._running = False
-
-    def shutdown(self):
-        self._shutdown_requested = True
-        while self._running:
-            time.sleep(self._poll_interval)
-        self._shutdown_requested = False
-        print("TranscodeExecutor shutdown finished")
+class TranscodeExecutor(BaseQueueExecutor):
+    def handle_job(self, job):
+        with open(f"{job.outputs[0]}.transcode_log", "w") as stderr:
+            transcode(job.profile, job.inputs, job.outputs, stderr=stderr)
+            # TODO report progress
