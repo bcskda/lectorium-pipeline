@@ -1,9 +1,11 @@
+import functools
 import io
 import json
 import queue
 import socketserver
 import time
 from threading import Thread
+from typing import List
 
 
 class BaseDaemon:
@@ -39,29 +41,37 @@ class BaseDaemon:
         print("BaseDaemon shutdown finished")
 
 class JobQueueDaemon(BaseDaemon):
-    def __init__(self, executor_cls, *args, **kwargs):
+    def __init__(self, queues: List[str]):
         """Constructs executor instance with (self.job_queue, *args, **kwargs)
         
         executor_cls.shutdown method should block until executor_cls.run finishes
         """
         super(JobQueueDaemon, self).__init__()
-        self.job_queue = queue.Queue()
-        self.executor = executor_cls(self.job_queue, *args, **kwargs)
-        self._executor_thread = None
-    
+        self.job_queues = {key: queue.Queue() for key in queues}
+        self.executors = []
+        self._executor_threads = []
+
+    def add_executor(self, queue_key: str, executor_cls, *args, **kwargs):
+        executor = executor_cls(self.job_queues[queue_key], *args, **kwargs)
+        self.executors.append(executor)
+
     def shutdown(self):
         super(JobQueueDaemon, self).shutdown()
-        self.executor.shutdown()
-        self._executor_thread.join()
-        self._executor_thread = None
+        for executor in self.executors:
+            executor.shutdown()
+        for thread in self._executor_threads:
+            thread.join()
+        self._executor_threads = []
         print("JobQueueDaemon shutdown finished")
 
     def start(self):
-        if self._executor_thread:
+        if self._executor_threads:
             raise RuntimeError("Already started")
 
-        self._executor_thread = Thread(target=self.executor.run)
-        self._executor_thread.start()
+        for executor in self.executors:
+            thread = Thread(target=executor.run)
+            self._executor_threads.append(thread)
+            thread.start()
         super(JobQueueDaemon, self).start()
 
 class BaseQueueExecutor:
@@ -77,6 +87,7 @@ class BaseQueueExecutor:
     def run(self):
         self._running = True # thread-safety left
         while not self._shutdown_requested:
+            # TODO process remaining queue
             try:
                 job = self.job_queue.get(timeout=self._poll_interval)
             except queue.Empty:
@@ -111,3 +122,27 @@ class JsonRequestHandler(socketserver.StreamRequestHandler):
     def finish(self):
         json.dump(self.response_obj, io.TextIOWrapper(self.wfile))
         super(JsonRequestHandler, self).finish()
+
+class HandlerDispatcher:
+    """RequestHandler helper to dispatch requests."""
+    def __init__(self):
+        self._handlers = {}
+
+    def add_handler(self, key):
+        """
+        Example:
+        >>> dispatcher = HandlerDispatcher
+        >>> dispatcher.add_handler("create")
+        ... def on_create():
+        ...     pass
+        """
+        if key in self._handlers:
+            raise KeyError(f"Handler exists: f{key}")
+
+        def wrapper(func):
+            self._handlers[key] = func
+            return func
+        return wrapper
+    
+    def get_handler(self, key):
+        return self._handlers[key]
