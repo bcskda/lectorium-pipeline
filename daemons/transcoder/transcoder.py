@@ -18,45 +18,33 @@ Output:
 {"error": 0, "result": {"accept": [0], "discard": []}}
 """
 
-import json
-import queue
-import socketserver
-import sys
-import time
-from threading import Thread
 from typing import Dict
 from config import Config
 from transcode_v2 import transcode, TranscodeError, validate_args
-from daemons.abc import BaseQueueExecutor, JobQueueDaemon
+from daemons.abc import BaseQueueExecutor, JobQueueDaemon, JsonRequestHandler
 
 
-class TranscodeRequestHandler(socketserver.StreamRequestHandler):
+class TranscodeRequestHandler(JsonRequestHandler):
     def handle(self):
-        _daemon = self.server.daemon
-        response = {}
-        response["error"] = 0
-        response["result"] = {"accept": [], "discard": []}
-        
-        try:
-            try:
-                jobs = json.load(self.rfile) # Probably expect clients to indicate shutdown
-            except json.JSONDecodeError as e:
-                response["error"] = 1
-                response["error_desc"] = f"JSONDecodeError: {e}"
-                raise
-            
-            for idx, job in enumerate(jobs):
-                try:
-                    _daemon.job_queue.put(TranscodeJob(job))
-                    response["result"]["accept"].append(idx)
-                except TranscodeError as e:
-                    response["result"]["discard"].append({"index": idx, "desc": f"{e}"})
+        if self.request_obj is None:
+            self.response_obj["error"] = 1
+            self.response_obj["error_desc"] = "Invalid JSON"
+            return
 
-        except Exception as e:
-            response["error"] = 1
-            response["error_desc"] = f"Unhandled exception: {e}"
-        finally:
-            self.wfile.write(json.dumps(response).encode("utf-8"))
+        self.response_obj["error"] = 0
+        self.response_obj["result"] = {
+            "accept": [],
+            "discard": []
+        }
+
+        for idx, job in enumerate(self.request_obj):
+            try:
+                self.server.daemon.job_queue.put(TranscodeJob(job))
+                self.response_obj["result"]["accept"].append(idx)
+            except TranscodeError as e:
+                response["result"]["discard"].append({
+                    "index": idx, "type": f"{type(e)}", "desc": f"{e}"
+                })
 
 class TranscodeJob:
     def __init__(self, job: Dict):
