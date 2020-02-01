@@ -1,3 +1,4 @@
+import functools
 import io
 import json
 import queue
@@ -111,3 +112,27 @@ class JsonRequestHandler(socketserver.StreamRequestHandler):
     def finish(self):
         json.dump(self.response_obj, io.TextIOWrapper(self.wfile))
         super(JsonRequestHandler, self).finish()
+
+class HandlerDispatcher:
+    """RequestHandler helper to dispatch requests."""
+    def __init__(self):
+        self._handlers = {}
+
+    def add_handler(self, key):
+        """
+        Example:
+        >>> dispatcher = HandlerDispatcher
+        >>> dispatcher.add_handler("create")
+        ... def on_create():
+        ...     pass
+        """
+        if key in self._handlers:
+            raise KeyError(f"Handler exists: f{key}")
+
+        def wrapper(func):
+            self._handlers[key] = func
+            return func
+        return wrapper
+    
+    def get_handler(self, key):
+        return self._handlers[key]
