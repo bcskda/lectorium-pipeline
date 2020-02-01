@@ -6,7 +6,8 @@ from .importer import ImportExecutor, ImportRequestHandler
 
 
 def main(server_address, output_dir):
-    daemon = JobQueueDaemon(ImportExecutor, output_dir, ("127.0.0.1", 1337))
+    daemon = JobQueueDaemon(["q_import"])
+    daemon.add_executor("q_import", ImportExecutor, output_dir, ("127.0.0.1", 1337))
     daemon.add_server(socketserver.TCPServer(server_address, ImportRequestHandler))
     daemon.start()
     

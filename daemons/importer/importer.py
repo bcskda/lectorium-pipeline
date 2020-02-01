@@ -36,8 +36,14 @@ class ImportRequestHandler(daemons.abc.JsonRequestHandler):
     @mesg_type_dispatcher.add_handler("import_request")
     def handle_import_request(self):
         sd_root = self.request_obj["message"]["path"]
-        self.server.daemon.job_queue.put(sd_root)
-
+        self.server.daemon.job_queues["q_import"].put(sd_root)
+    
+    @mesg_type_dispatcher.add_handler("transcode_result")
+    def handle_transcode_result(self):
+        output_paths = self.request_obj["message"]["outputs"]
+        for path in output_paths:
+            print(f"Transcode finished: {path}")
+            self.server.daemon.job_queues["q_upload"].put(path)
 
 class ImportExecutor(daemons.abc.BaseQueueExecutor):
     def __init__(self, job_queue, output_dir, transcoder_address):
