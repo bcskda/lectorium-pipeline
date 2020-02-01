@@ -4,20 +4,42 @@ import socket
 import socketserver
 from concat_ng.tasks import into_tasks
 from config import Config
-from daemons.abc import JobQueueDaemon, BaseQueueExecutor
+import daemons.abc
 
+class ImportRequestHandler(daemons.abc.JsonRequestHandler):
+    mesg_type_dispatcher = daemons.abc.HandlerDispatcher()
 
-class ImportRequestHandler(socketserver.StreamRequestHandler):
+    def error(self, desc):
+        self.response_obj["error"] = 1
+        self.response_obj["error_desc"] = desc
+
+    def validate_request(self):
+        if self.request_obj is None:
+            self.error("Invalid JSON")
+        else:
+            try:
+                mesg_type = self.request_obj["message_type"]
+                return self.mesg_type_dispatcher.get_handler(mesg_type)
+            except KeyError:
+                self.error("Invalid message type")
+
     def handle(self):
-        _daemon = self.server.daemon
-        
-        try:
-            sd_root = self.rfile.read().decode("utf-8").strip()
-            _daemon.job_queue.put(sd_root)
-        except Exception as e:
-            print(f"Unhandled exception: {e}")
+        handler_method = self.validate_request()
+        if "error" not in self.response_obj:
+            try:
+                handler_method(self)
+                self.response_obj["error"] = 0
+            except Exception as e:
+                print(f"Unhandled exception in handler {handler_method}: {type(e)}: {e}")
+                self.error("Unhandled exception")
 
-class ImportExecutor(BaseQueueExecutor):
+    @mesg_type_dispatcher.add_handler("import_request")
+    def handle_import_request(self):
+        sd_root = self.request_obj["message"]["path"]
+        self.server.daemon.job_queue.put(sd_root)
+
+
+class ImportExecutor(daemons.abc.BaseQueueExecutor):
     def __init__(self, job_queue, output_dir, transcoder_address):
         super(ImportExecutor, self).__init__(job_queue)
         self.output_dir = output_dir
