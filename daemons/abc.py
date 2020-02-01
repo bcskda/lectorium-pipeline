@@ -1,3 +1,5 @@
+import io
+import json
 import queue
 import socketserver
 import time
@@ -91,3 +93,21 @@ class BaseQueueExecutor:
             time.sleep(self._poll_interval)
         self._shutdown_requested = False
         print("BaseQueueExecutor shutdown finished")
+
+class JsonRequestHandler(socketserver.StreamRequestHandler):
+    """RequestHandler helper for json-based services.
+    A concrete handler should define handle() method. Defines additional
+    properties: self.request_obj and self.response_obj to use inside handle().
+    self.request_obj will be None in case request was not valid JSON."""
+
+    def setup(self):
+        super(JsonRequestHandler, self).setup()
+        self.response_obj = {}
+        try:
+            self.request_obj = json.load(self.rfile) # Client should send SHUT_WR
+        except json.JSONDecodeError:
+            self.request_obj = None
+
+    def finish(self):
+        json.dump(self.response_obj, io.TextIOWrapper(self.wfile))
+        super(JsonRequestHandler, self).finish()
