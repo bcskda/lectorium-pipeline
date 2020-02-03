@@ -75,8 +75,20 @@ class GDriveClient:
             self.upload_file(path, GDriveClient.RemoteNode(name, remote_folder), on_progress)
             on_each(path)
 
-    def mkdir(self, name: str, parent_id: str) -> str:
-        """Implies exist_ok=True. Return value: folder id."""
+    def _list(self, query, query_args, trashed=False, fields='*'):
+        """
+        Query arguments should be properly escaped. Observes only first page
+        of results.
+        """
+        request = self.service.files().list(
+            q=query.format(*query_args) + ' and trashed = {}'.format(trashed),
+            fields=fields,
+            corpora='user'
+        )
+        return request.execute()
+
+    def _mkdir(self, name: str, parent_id: str) -> str:
+        """No existence checks. Return value: folder id."""
         metadata = {
             'name': name,
             'parents': [parent_id],
@@ -86,8 +98,26 @@ class GDriveClient:
         folder = request.execute()
         return folder.get('id')
 
-    def makedirs(self, path: str, local_root: str, remote_root_id: str) -> str:
-        """Implies exist_ok=True. Return value: folder id."""
+    def mkdir(self, name: str, parent_id: str, exist_ok=False) -> str:
+        """Return value: folder id."""
+        query = "name = '{}' and '{}' in parents and mimeType = '{}'"
+        query_args = (
+            name.replace("\\", "\\\\").replace("'", "\\'"),
+            parent_id,
+            GDRIVE_MIMETYPES['folder']
+        )
+        fields = 'files(id,kind,owners(emailAddress))'
+        matches = self._list(query, query_args, fields=fields).get('files')
+        if matches:
+            if len(matches) > 1 or not exist_ok:
+                raise FileExistsError(str(matches))
+            else:
+                return matches[0]['id']
+        else:
+            return self._mkdir(name, parent_id)
+
+    def makedirs(self, path: str, local_root: str, remote_root_id: str = 'root', exist_ok=False) -> str:
+        """Return value: folder id."""
         path_r, local_root_r = map(os.path.realpath, (path, local_root))
         common = os.path.commonpath((path_r, local_root_r))
         if not os.path.samefile(common, local_root):
@@ -96,9 +126,12 @@ class GDriveClient:
         rel = os.path.relpath(path, start=local_root)
         parts = pathlib.PurePath(rel).parts
         parent = remote_root_id
-        for dirname in parts:
-            parent = self.mkdir(dirname, parent)
-        return parent
+        if parts:
+            for dirname in parts[:-1]:
+                parent = self.mkdir(dirname, parent, exist_ok=True)
+            return self.mkdir(parts[-1], parent, exist_ok=exist_ok)
+        else:
+            return remote_root_id
 
 if __name__ == '__main__':
     from config import Config
