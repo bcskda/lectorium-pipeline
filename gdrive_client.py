@@ -2,6 +2,7 @@
 
 import mimetypes
 import os.path
+import pathlib
 import pickle
 from collections import namedtuple
 from typing import Callable
@@ -10,6 +11,10 @@ from googleapiclient.http import MediaFileUpload
 from google_auth_oauthlib.flow import InstalledAppFlow
 from google.auth.transport.requests import Request
 
+
+GDRIVE_MIMETYPES = {
+    'folder': 'application/vnd.google-apps.folder'
+}
 
 class GDriveClient:
     def __init__(self, config):
@@ -62,10 +67,57 @@ class GDriveClient:
             return response
         
         except Exception as e:
-            print(f"Exception during upload: {e}")
+            print(f'Exception during upload: {e}')
 
     def upload_files(self, local_paths, remote_folder, on_each = None, on_progress = None):
         for path in local_paths:
             name = os.path.basename(path)
             self.upload_file(path, GDriveClient.RemoteNode(name, remote_folder), on_progress)
             on_each(path)
+
+    def mkdir(self, name: str, parent_id: str) -> str:
+        """Implies exist_ok=True. Return value: folder id."""
+        metadata = {
+            'name': name,
+            'parents': [parent_id],
+            'mimeType': GDRIVE_MIMETYPES['folder']
+        }
+        request = self.service.files().create(body=metadata, fields='id')
+        folder = request.execute()
+        return folder.get('id')
+
+    def makedirs(self, path: str, local_root: str, remote_root_id: str) -> str:
+        """Implies exist_ok=True. Return value: folder id."""
+        path_r, local_root_r = map(os.path.realpath, (path, local_root))
+        common = os.path.commonpath((path_r, local_root_r))
+        if not os.path.samefile(common, local_root):
+            raise ValueError('path outside local_root')
+        
+        rel = os.path.relpath(path, start=local_root)
+        parts = pathlib.PurePath(rel).parts
+        parent = remote_root_id
+        for dirname in parts:
+            parent = self.mkdir(dirname, parent)
+        return parent
+
+if __name__ == '__main__':
+    from config import Config
+    Config.update('config.json')
+    client = GDriveClient(Config)
+    
+    remote_root_id = client.mkdir('pipeline_test_root', 'root')
+    print(f'root: {remote_root_id}')
+    local_root = 'input_dir'
+    
+    subdir_id = client.makedirs(
+        './input_dir/PRIVATE/AVCHD/BDMV/STREAM/', local_root, remote_root_id
+    )
+    print(f'subdir: {subdir_id}')
+    
+    try:
+        path = 'input_dir/../../../../../etc/passwd'
+        other_subdir_id = client.makedirs(path, local_root, remote_root_id)
+    except ValueError as e:
+        print(f'makedirs{(path, local_root, remote_root_id)} raised exception: {e}')
+    else:
+        raise RuntimeError('Should raise')
