@@ -2,12 +2,14 @@ import signal
 import socketserver
 from config import Config
 from daemons.abc import JobQueueDaemon
-from .importer import ImportExecutor, ImportRequestHandler
+from gdrive_client import GDriveClient
+from .importer import ImportExecutor, UploadExecutor, ImportRequestHandler
 
 
-def main(server_address, output_dir):
-    daemon = JobQueueDaemon(["q_import"])
+def main(server_address, output_dir, drive_client, remote_root_id):
+    daemon = JobQueueDaemon(["q_import", "q_upload"])
     daemon.add_executor("q_import", ImportExecutor, output_dir, ("127.0.0.1", 1337))
+    daemon.add_executor("q_upload", UploadExecutor, drive_client, remote_root_id, output_dir)
     daemon.add_server(socketserver.TCPServer(server_address, ImportRequestHandler))
     daemon.start()
     
@@ -22,4 +24,5 @@ def main(server_address, output_dir):
 
 if __name__ == '__main__':
     Config.update("config.json")
-    main(("127.0.0.1", 1338), "./output_dir/")
+    drive_client = GDriveClient(Config)
+    main(("127.0.0.1", 1338), "./output_dir/", drive_client, Config.root_id)

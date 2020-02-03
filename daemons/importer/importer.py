@@ -72,3 +72,22 @@ class ImportExecutor(daemons.abc.BaseQueueExecutor):
                     print(f"Transcoder response: {response}")
                 except Exception as e:
                     print(f"Unhandled exception: {e}")
+
+class UploadExecutor(daemons.abc.BaseQueueExecutor):
+    def __init__(self, job_queue, gdrive_client, remote_root_id, sources_root):
+        super(UploadExecutor, self).__init__(job_queue)
+        self.gdrive_client = gdrive_client
+        self.remote_root_id = remote_root_id
+        self.sources_root = sources_root
+
+    def handle_job(self, local_path: str):
+        local_dir = os.path.dirname(local_path)
+        folder_id = self.gdrive_client.makedirs(
+            local_dir, self.sources_root, self.remote_root_id, exist_ok=True
+        )
+        print(f'Remote folder: {folder_id}')
+        self.gdrive_client.upload_files(
+            [local_path], folder_id,
+            on_each=lambda x: print(f"on_each {x}"),
+            on_progress=lambda x: print(f"on_progress {x}")
+        )
