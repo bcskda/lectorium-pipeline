@@ -1,14 +1,17 @@
+import hashlib
 import os.path
 import subprocess
 from . import logger
 
 
 MOUNTPOINT_BASE = "/mnt"
+MOUNTPOINT_DIRNAME_FMT = "lectorium-devwatch-mountpoint_{}"
 
 def mount(device, path=None) -> str:
     """Return value: path, generated path, or None if error"""
     if not path:
-        basename = "lectorium-devwatch_{}".format(hash(device.sys_path))
+        dirname = hashlib.md5(device.sys_path.encode()).hexdigest()
+        basename = MOUNTPOINT_DIRNAME_FMT.format(dirname)
         path = os.path.join(MOUNTPOINT_BASE, basename)
         try:
             os.mkdir(path)
