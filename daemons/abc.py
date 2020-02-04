@@ -5,13 +5,14 @@ import queue
 import socketserver
 import time
 from threading import Thread
-from typing import List
+from typing import Callable, List
 
 
 class BaseDaemon:
     def __init__(self):
         self.servers = []
         self._threads = []
+        self._started = False
 
     def add_server(self, server):
         """Sets server.daemon property to access daemon instance"""
@@ -19,9 +20,7 @@ class BaseDaemon:
         self.servers.append(server)
 
     def start(self):
-        if not self.servers:
-            raise RuntimeError("No servers registered")
-        if self._threads:
+        if self._started:
             raise RuntimeError("Already started")
         
         self._threads = []
@@ -29,8 +28,10 @@ class BaseDaemon:
             srv_thread = Thread(target=srv.serve_forever)
             srv_thread.start()
             self._threads.append(srv_thread)
+        self._started = True
+
     def shutdown(self):
-        if not self._threads:
+        if not self._started:
             raise RuntimeError("Not started")
         
         for srv, srv_thread in zip(self.servers, self._threads):
@@ -52,7 +53,10 @@ class JobQueueDaemon(BaseDaemon):
         self._executor_threads = []
 
     def add_executor(self, queue_key: str, executor_cls, *args, **kwargs):
-        executor = executor_cls(self.job_queues[queue_key], *args, **kwargs)
+        """if executor_cls is not a BaseQueueExecutor, queue_key is ignored"""
+        if issubclass(executor_cls, BaseQueueExecutor):
+            args = [self.job_queues[queue_key]] + args
+        executor = executor_cls(*args, **kwargs)
         self.executors.append(executor)
 
     def shutdown(self):
@@ -74,28 +78,35 @@ class JobQueueDaemon(BaseDaemon):
             thread.start()
         super(JobQueueDaemon, self).start()
 
-class BaseQueueExecutor:
-    def __init__(self, job_queue: queue.Queue, poll_interval=0.5):
+
+class BaseLoopExecutor:
+    DEFAULT_TIMEOUT = 0.5
+    
+    def __init__(self, event_poll: Callable, etimeout_cls=Exception, poll_interval=DEFAULT_TIMEOUT):
+        self.event_poll = event_poll
+        self.etimeout_cls = etimeout_cls
         self._running = False
         self._shutdown_requested = False
         self._poll_interval = poll_interval
-        self.job_queue = job_queue
 
-    def handle_job(self, job):
+    def handle_event(self, event):
         raise NotImplementedError()
 
     def run(self):
         self._running = True # thread-safety left
         while not self._shutdown_requested:
-            # TODO process remaining queue
+            # TODO after shutdown request, poll until etimeout (= empty event queue)
             try:
-                job = self.job_queue.get(timeout=self._poll_interval)
-            except queue.Empty:
+                event = self.event_poll(timeout=self._poll_interval)
+            except self.etimeout_cls:
                 continue
-            try:
-                self.handle_job(job)
             except Exception as e:
-                print(f"[BaseQueueExecutor] Unhandled exception: {e}")
+                print(f"[BaseLoopExecutor] Unhandled exception at event_poll: {e}")
+            else:
+                try:
+                    self.handle_event(event)
+                except Exception as e:
+                    print(f"[BaseLoopExecutor] Unhandled exception at handle_event: {e}")
         self._running = False
 
     def shutdown(self):
@@ -103,7 +114,18 @@ class BaseQueueExecutor:
         while self._running:
             time.sleep(self._poll_interval)
         self._shutdown_requested = False
-        print("BaseQueueExecutor shutdown finished")
+        print("BaseLoopExecutor shutdown finished")
+
+class BaseQueueExecutor(BaseLoopExecutor):
+    def __init__(self, job_queue: queue.Queue, poll_interval=BaseLoopExecutor.DEFAULT_TIMEOUT):
+        self.job_queue = job_queue
+        super(BaseQueueExecutor, self).__init__(self.job_queue.pop, queue.Empty, poll_interval)
+
+    def handle_event(self, event):
+        self.handle_job(event)
+
+    def handle_job(self, job):
+        raise NotImplementedError()
 
 class JsonRequestHandler(socketserver.StreamRequestHandler):
     """RequestHandler helper for json-based services.
@@ -132,7 +154,7 @@ class HandlerDispatcher:
         """
         Example:
         >>> dispatcher = HandlerDispatcher
-        >>> dispatcher.add_handler("create")
+        >>> @dispatcher.add_handler("create")
         ... def on_create():
         ...     pass
         """
