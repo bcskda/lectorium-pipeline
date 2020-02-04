@@ -1,7 +1,8 @@
 import pyudev
 import signal
+import socketserver
 from daemons.abc import JobQueueDaemon
-from .devwatch import DevwatchExecutor
+from .devwatch import DevwatchExecutor, DevwatchRequestHandler, ImportExecutor
 
 def check_match(device):
     try:
@@ -13,11 +14,15 @@ def check_match(device):
         match = False
     return match
 
-def main():
+def main(server_address, importer_address):
     # TODO check mount privilege
-    daemon = JobQueueDaemon([])
+    daemon = JobQueueDaemon(["q_import"])
     udev_context = pyudev.Context()
-    daemon.add_executor(None, DevwatchExecutor, udev_context, udev_filter="block", event_filter=check_match)
+    daemon.add_executor(None, DevwatchExecutor, udev_context,
+                        daemon, daemon.job_queues["q_import"],
+                        udev_filter="block", event_filter=check_match)
+    daemon.add_executor("q_import", ImportExecutor, importer_address)
+    daemon.add_server(socketserver.TCPServer(server_address, DevwatchRequestHandler))
     daemon.start()
     
     try:
@@ -30,4 +35,6 @@ def main():
         daemon.shutdown()
 
 if __name__ == "__main__":
-    main()
+    server_address = ("127.0.01", 1339)
+    importer_address = ("127.0.0.1", 1338)
+    main(server_address, importer_address)
