@@ -1,0 +1,18 @@
+{
+  "inputs": [
+    {
+      "proto": "concat"
+    }
+  ],
+  "outputs": [
+    {
+      "input_nodes": ["0:0", "0:1", "0:1"],
+      "codec_options": [
+        "-c:v", "libx264", "-crf", "23",
+        "-c:a:0", "mp3", "-ab", "384K",
+        "-c:a:1", "aac", "-ab", "384K"
+      ]
+    }
+  ],
+  "filtergraph": null
+}

@@ -14,6 +14,6 @@
             "-hide_banner", "-loglevel", "warning"
         ],
         "default_profile": "concat_copy",
-        "preset_dir": "ff_presets/v2"
+        "preset_dir": "ff_presets"
     }
 }
