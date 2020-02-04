@@ -14,6 +14,7 @@ class DevwatchExecutor(daemons.abc.BaseLoopExecutor):
         if udev_filter:
             self.monitor.filter_by(udev_filter)
         self.event_filter = event_filter
+        self.active_devices = {}
         super(DevwatchExecutor, self).__init__(self.event_poll, BlockingIOError)
 
     def handle_event(self, event):
@@ -39,7 +40,18 @@ class DevwatchExecutor(daemons.abc.BaseLoopExecutor):
         if mountpoint:
             content = self._guess_content(mountpoint)
             logger.info(f"device={event.sys_path} mountpoint={mountpoint} content={content}")
+            if content:
+                self.active_devices[event.sys_path] = mountpoint
+            else:
+                umount(mountpoint)
+
+    @action_dispatcher.add_handler("remove")
+    def on_remove(self, event):
+        mountpoint = self.active_devices.get(event.sys_path)
+        if mountpoint:
+            logger.warning(f"active device removed: device={event.sys_path} mountpoint={mountpoint}")
             umount(mountpoint)
+            del self.active_devices[event.sys_path]
 
     def _guess_content(self, path: str) -> str or None:
         if os.path.isdir(os.path.join(path, "PRIVATE", "AVCHD", "BDMV", "STREAM")):
