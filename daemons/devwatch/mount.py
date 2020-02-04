@@ -6,9 +6,9 @@ from . import logger
 MOUNTPOINT_BASE = "/mnt"
 
 def mount(device, path=None) -> str:
-    """Return value: path or generated path"""
+    """Return value: path, generated path, or None if error"""
     if not path:
-        basename = "lectorium-devwatch-{}".format(hash(device))
+        basename = "lectorium-devwatch_{}".format(hash(device.sys_path))
         path = os.path.join(MOUNTPOINT_BASE, basename)
         try:
             os.mkdir(path)
@@ -21,9 +21,9 @@ def mount(device, path=None) -> str:
         subprocess.check_call(cmdline)
     except subprocess.CalledProcessError as e:
         logger.exception(e)
-        raise RuntimeError("mount(8) failed") from e
-    
-    return path
+        return None
+    else:
+        return path
 
 def umount(path):
     cmdline = ["umount", path]

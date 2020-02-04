@@ -1,6 +1,7 @@
-from . import logger
-from .discovery import discovery_loop, test_directory
-from .mount import mount, umount
+import pyudev
+import signal
+from daemons.abc import JobQueueDaemon
+from .devwatch import DevwatchExecutor
 
 def check_match(device):
     try:
@@ -12,33 +13,21 @@ def check_match(device):
         match = False
     return match
 
-def on_match(device):
-    try:
-        mount_path = mount(device)
-        logger.info("mounted {} at {}".format(device, mount_path))
-    except Exception as e:
-        logger.error("mount() failed for {}".format(device))
-        return
-    
-    content = None
-    try:
-        content = test_directory(mount_path)
-        logger.info("{} content is {}".format(device, content))
-        if content:
-            # TODO send import task
-    except Exception as e:
-        logger.exception(e)
-    finally:
-        if content is None:
-            umount(mount_path)
-            logger.info("unmounted {}".format(device))
-
 def main():
     # TODO check mount privilege
+    daemon = JobQueueDaemon([])
+    udev_context = pyudev.Context()
+    daemon.add_executor(None, DevwatchExecutor, udev_context, udev_filter="block", event_filter=check_match)
+    daemon.start()
+    
     try:
-        discovery_loop(check_match, on_match)
+        sig = signal.sigwaitinfo({signal.SIGINT}) # TODO handle sigterm
     except KeyboardInterrupt:
-        return 1
+        sig = signal.SIGINT
+    finally:
+        sig = signal.Signals(sig.si_signo)
+        print(f"Shutting down after {sig.name}")
+        daemon.shutdown()
 
 if __name__ == "__main__":
     main()
