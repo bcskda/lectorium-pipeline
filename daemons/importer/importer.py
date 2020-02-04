@@ -6,38 +6,14 @@ from concat_ng.tasks import into_tasks
 from config import Config
 import daemons.abc
 
-class ImportRequestHandler(daemons.abc.JsonRequestHandler):
-    mesg_type_dispatcher = daemons.abc.HandlerDispatcher()
-
-    def error(self, desc):
-        self.response_obj["error"] = 1
-        self.response_obj["error_desc"] = desc
-
-    def validate_request(self):
-        if self.request_obj is None:
-            self.error("Invalid JSON")
-        else:
-            try:
-                mesg_type = self.request_obj["message_type"]
-                return self.mesg_type_dispatcher.get_handler(mesg_type)
-            except KeyError:
-                self.error("Invalid message type")
-
-    def handle(self):
-        handler_method = self.validate_request()
-        if "error" not in self.response_obj:
-            try:
-                handler_method(self)
-                self.response_obj["error"] = 0
-            except Exception as e:
-                print(f"Unhandled exception in handler {handler_method}: {type(e)}: {e}")
-                self.error("Unhandled exception")
+class ImportRequestHandler(daemons.abc.DispatchedRequestHandler):
+    mesg_type_dispatcher = daemons.abc.DispatchedRequestHandler.mesg_dispatcher
 
     @mesg_type_dispatcher.add_handler("import_request")
     def handle_import_request(self):
         sd_root = self.request_obj["message"]["path"]
         self.server.daemon.job_queues["q_import"].put(sd_root)
-    
+
     @mesg_type_dispatcher.add_handler("transcode_result")
     def handle_transcode_result(self):
         output_paths = self.request_obj["message"]["outputs"]
