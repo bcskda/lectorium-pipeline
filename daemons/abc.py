@@ -55,7 +55,7 @@ class JobQueueDaemon(BaseDaemon):
     def add_executor(self, queue_key: str, executor_cls, *args, **kwargs):
         """if executor_cls is not a BaseQueueExecutor, queue_key is ignored"""
         if issubclass(executor_cls, BaseQueueExecutor):
-            args = [self.job_queues[queue_key]] + args
+            args = (self.job_queues[queue_key], *args)
         executor = executor_cls(*args, **kwargs)
         self.executors.append(executor)
 
@@ -119,7 +119,7 @@ class BaseLoopExecutor:
 class BaseQueueExecutor(BaseLoopExecutor):
     def __init__(self, job_queue: queue.Queue, poll_interval=BaseLoopExecutor.DEFAULT_TIMEOUT):
         self.job_queue = job_queue
-        super(BaseQueueExecutor, self).__init__(self.job_queue.pop, queue.Empty, poll_interval)
+        super(BaseQueueExecutor, self).__init__(self.job_queue.get, queue.Empty, poll_interval)
 
     def handle_event(self, event):
         self.handle_job(event)
@@ -168,3 +168,35 @@ class HandlerDispatcher:
     
     def get_handler(self, key):
         return self._handlers[key]
+
+class DispatchedRequestHandler(JsonRequestHandler):
+    """Unifies message_type-based dispatch and error handling.
+    Defines additional property self.mesg_dispatcher: HandlerDispatcher.
+    Defines additional methods error() and select_handler().
+    A concrete handler should define decorated per-message-type handler
+    methods."""
+    mesg_dispatcher = HandlerDispatcher()
+
+    def error(self, desc):
+        self.response_obj["error"] = 1
+        self.response_obj["error_desc"] = desc
+
+    def handle(self):
+        handler_method = self.select_handler()
+        if handler_method:
+            try:
+                handler_method(self)
+                self.response_obj["error"] = 0
+            except Exception as e:
+                print(f"Unhandled exception in handler {handler_method}: {type(e)}: {e}")
+                self.error("Unhandled exception")
+
+    def select_handler(self):
+        if self.request_obj is None:
+            self.error("Invalid JSON")
+        else:
+            try:
+                mesg_type = self.request_obj["message_type"]
+                return self.mesg_type_dispatcher.get_handler(mesg_type)
+            except KeyError:
+                self.error("Invalid message type")
