@@ -8,8 +8,10 @@ from .importer import ImportExecutor, UploadExecutor, ImportRequestHandler
 
 def main(server_address, output_dir, drive_client, remote_root_id):
     daemon = JobQueueDaemon(["q_import", "q_upload"])
-    daemon.add_executor("q_import", ImportExecutor, output_dir, ("127.0.0.1", 1337))
-    daemon.add_executor("q_upload", UploadExecutor, drive_client, remote_root_id, output_dir)
+    daemon.active_imports = {}
+    daemon.active_transcodes = {}
+    daemon.add_executor("q_import", ImportExecutor, output_dir, ("127.0.0.1", 1337), daemon)
+    daemon.add_executor("q_upload", UploadExecutor, drive_client, remote_root_id, output_dir, ("127.0.0.1", 1339), daemon)
     daemon.add_server(socketserver.TCPServer(server_address, ImportRequestHandler))
     daemon.start()
     

@@ -9,13 +9,15 @@ from . import logger
 
 
 class DevwatchRequestHandler(daemons.abc.DispatchedRequestHandler):
-    _mesg_dispatcher = daemons.abc.DispatchedRequestHandler.mesg_dispatcher
+    mesg_dispatcher = daemons.abc.DispatchedRequestHandler.mesg_dispatcher
 
-    @_mesg_dispatcher.add_handler("import_result")
+    @mesg_dispatcher.add_handler("import_result")
     def on_import_result(self):
         req = self.request_obj["message"]
         mountpoint = req["path"]
-        by_mountpoint = {v: k for k, v in self.server.daemon.active_devices}
+        logger.debug(self.server.daemon.active_devices)
+        by_mountpoint = {v: k for k, v in self.server.daemon.active_devices.items()}
+        logger.debug(by_mountpoint)
         device = by_mountpoint.get(mountpoint)
         if device:
             logger.info(f"import finished: device={device} mountpoint={mountpoint}")

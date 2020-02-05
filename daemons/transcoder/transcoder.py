@@ -27,7 +27,7 @@ from daemons.abc import BaseQueueExecutor, JobQueueDaemon, JsonRequestHandler
 
 
 class TranscodeRequestHandler(JsonRequestHandler):
-    def handle(self):
+    def handle_obj(self):
         if self.request_obj is None:
             self.response_obj["error"] = 1
             self.response_obj["error_desc"] = "Invalid JSON"
@@ -68,7 +68,7 @@ class TranscodeExecutor(BaseQueueExecutor):
 
     def handle_job(self, job):
         with open(f"{job.outputs[0]}.transcode_log", "w") as stderr:
-            transcode(job.profile, job.inputs, job.outputs, stderr=stderr)
+            # transcode(job.profile, job.inputs, job.outputs, stderr=stderr)
             # TODO report progress
             self.report_queue.put(job.outputs)
 
@@ -89,5 +89,4 @@ class ResultReporter(BaseQueueExecutor):
             sock.shutdown(socket.SHUT_WR)
             with sock.makefile("r") as sock_r:
                 ans = json.load(sock_r)
-            sock.shutdown(socket.SHUT_RD)
             print(f"ResultReporter: remote answer: {ans}")

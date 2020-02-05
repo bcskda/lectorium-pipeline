@@ -1,6 +1,7 @@
 import functools
 import io
 import json
+import logging
 import queue
 import socketserver
 import time
@@ -101,12 +102,12 @@ class BaseLoopExecutor:
             except self.etimeout_cls:
                 continue
             except Exception as e:
-                print(f"[BaseLoopExecutor] Unhandled exception at event_poll: {e}")
+                logging.exception(e)
             else:
                 try:
                     self.handle_event(event)
                 except Exception as e:
-                    print(f"[BaseLoopExecutor] Unhandled exception at handle_event: {e}")
+                    logging.exception(e)
         self._running = False
 
     def shutdown(self):
@@ -138,12 +139,16 @@ class JsonRequestHandler(socketserver.StreamRequestHandler):
         self.response_obj = {}
         try:
             self.request_obj = json.load(self.rfile) # Client should send SHUT_WR
-        except json.JSONDecodeError:
+        except json.JSONDecodeError as e:
+            print(f"JSONDecodeError: {e}")
             self.request_obj = None
-
-    def finish(self):
-        json.dump(self.response_obj, io.TextIOWrapper(self.wfile))
-        super(JsonRequestHandler, self).finish()
+    
+    def handle(self):
+        self.handle_obj()
+        try:
+            json.dump(self.response_obj, io.TextIOWrapper(self.wfile))
+        except Exception as e:
+            logging.exception(e)
 
 class HandlerDispatcher:
     """RequestHandler helper to dispatch requests."""
@@ -181,7 +186,7 @@ class DispatchedRequestHandler(JsonRequestHandler):
         self.response_obj["error"] = 1
         self.response_obj["error_desc"] = desc
 
-    def handle(self):
+    def handle_obj(self):
         handler_method = self.select_handler()
         if handler_method:
             try:
@@ -189,7 +194,7 @@ class DispatchedRequestHandler(JsonRequestHandler):
                 self.response_obj["error"] = 0
             except Exception as e:
                 print(f"Unhandled exception in handler {handler_method}: {type(e)}: {e}")
-                self.error("Unhandled exception")
+                logging.exception("Unhandled exception")
 
     def select_handler(self):
         if self.request_obj is None:
@@ -197,6 +202,6 @@ class DispatchedRequestHandler(JsonRequestHandler):
         else:
             try:
                 mesg_type = self.request_obj["message_type"]
-                return self.mesg_type_dispatcher.get_handler(mesg_type)
+                return self.mesg_dispatcher.get_handler(mesg_type)
             except KeyError:
                 self.error("Invalid message type")

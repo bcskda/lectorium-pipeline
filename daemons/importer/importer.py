@@ -7,14 +7,14 @@ from config import Config
 import daemons.abc
 
 class ImportRequestHandler(daemons.abc.DispatchedRequestHandler):
-    mesg_type_dispatcher = daemons.abc.DispatchedRequestHandler.mesg_dispatcher
+    mesg_dispatcher = daemons.abc.DispatchedRequestHandler.mesg_dispatcher
 
-    @mesg_type_dispatcher.add_handler("import_request")
+    @mesg_dispatcher.add_handler("import_request")
     def handle_import_request(self):
         sd_root = self.request_obj["message"]["path"]
         self.server.daemon.job_queues["q_import"].put(sd_root)
 
-    @mesg_type_dispatcher.add_handler("transcode_result")
+    @mesg_dispatcher.add_handler("transcode_result")
     def handle_transcode_result(self):
         output_paths = self.request_obj["message"]["outputs"]
         for path in output_paths:
@@ -79,11 +79,11 @@ class UploadExecutor(daemons.abc.BaseQueueExecutor):
             local_dir, self.sources_root, self.remote_root_id, exist_ok=True
         )
         print(f'Remote folder: {folder_id}')
-        self.gdrive_client.upload_files(
+        """self.gdrive_client.upload_files(
             [local_path], folder_id,
             on_each=lambda x: print(f"on_each {x}"),
             on_progress=lambda x: print(f"on_progress {x}")
-        )
+        )"""
         self._unregister_transcode_job(local_path)
 
     def _unregister_transcode_job(self, local_path):
@@ -96,7 +96,7 @@ class UploadExecutor(daemons.abc.BaseQueueExecutor):
     
     def _report_import_finish(self, sd_root):
         message = {
-            "message_type": "import_finish",
+            "message_type": "import_result",
             "message": {"path": sd_root}
         }
         with socket.create_connection(self.report_addr) as sock:
@@ -105,5 +105,4 @@ class UploadExecutor(daemons.abc.BaseQueueExecutor):
             sock.shutdown(socket.SHUT_WR)
             with sock.makefile("r") as sock_r:
                 ans = json.load(sock_r)
-            sock.shutdown(socket.SHUT_RD)
             print(f"Devwatch response: {ans}")
