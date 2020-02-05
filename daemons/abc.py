@@ -40,7 +40,7 @@ class BaseDaemon:
             srv_thread.join()
             srv.server_close()
         self._threads = []
-        print("BaseDaemon shutdown finished")
+        logging.info("BaseDaemon shutdown finished")
 
 class JobQueueDaemon(BaseDaemon):
     def __init__(self, queues: List[str]):
@@ -67,7 +67,7 @@ class JobQueueDaemon(BaseDaemon):
         for thread in self._executor_threads:
             thread.join()
         self._executor_threads = []
-        print("JobQueueDaemon shutdown finished")
+        logging.info("JobQueueDaemon shutdown finished")
 
     def start(self):
         if self._executor_threads:
@@ -115,7 +115,7 @@ class BaseLoopExecutor:
         while self._running:
             time.sleep(self._poll_interval)
         self._shutdown_requested = False
-        print("BaseLoopExecutor shutdown finished")
+        logging.info("BaseLoopExecutor shutdown finished")
 
 class BaseQueueExecutor(BaseLoopExecutor):
     def __init__(self, job_queue: queue.Queue, poll_interval=BaseLoopExecutor.DEFAULT_TIMEOUT):
@@ -140,7 +140,7 @@ class JsonRequestHandler(socketserver.StreamRequestHandler):
         try:
             self.request_obj = json.load(self.rfile) # Client should send SHUT_WR
         except json.JSONDecodeError as e:
-            print(f"JSONDecodeError: {e}")
+            logging.exception("JSONDecodeError client={}", self.client_address)
             self.request_obj = None
     
     def handle(self):
@@ -193,8 +193,7 @@ class DispatchedRequestHandler(JsonRequestHandler):
                 handler_method(self)
                 self.response_obj["error"] = 0
             except Exception as e:
-                print(f"Unhandled exception in handler {handler_method}: {type(e)}: {e}")
-                logging.exception("Unhandled exception")
+                logging.exception("Unhandled exception in concrete handler")
 
     def select_handler(self):
         if self.request_obj is None:

@@ -1,3 +1,4 @@
+import logging
 import pyudev
 import signal
 import socketserver
@@ -31,10 +32,11 @@ def main(server_address, importer_address):
         sig = signal.SIGINT
     finally:
         sig = signal.Signals(sig.si_signo)
-        print(f"Shutting down after {sig.name}")
+        logging.info("Shutting down after {}", sig.name)
         daemon.shutdown()
 
 if __name__ == "__main__":
+    logging.getLogger("root").setLevel(logging.INFO)
     server_address = ("127.0.01", 1339)
     importer_address = ("127.0.0.1", 1338)
     main(server_address, importer_address)

@@ -1,4 +1,5 @@
 import json
+import logging
 import os
 import socket
 import socketserver
@@ -18,7 +19,7 @@ class ImportRequestHandler(daemons.abc.DispatchedRequestHandler):
     def handle_transcode_result(self):
         output_paths = self.request_obj["message"]["outputs"]
         for path in output_paths:
-            print(f"Transcode finished: {path}")
+            logging.info(f"Transcode finished: {path}")
             self.server.daemon.job_queues["q_upload"].put(path)
 
 class ImportExecutor(daemons.abc.BaseQueueExecutor):
@@ -38,8 +39,9 @@ class ImportExecutor(daemons.abc.BaseQueueExecutor):
         for task in concat_tasks:
             old_from = self.active_transcodes.get(task.destination)
             if old_from:
-                print("transcode already in progress: from={} old_from={} output_file={}".format(
-                    sd_root, old_from, task.destination))
+                logging.warning(
+                    "transcode already in progress: from={} old_from={} output_file={}",
+                    sd_root, old_from, task.destination)
                 continue
             self.active_transcodes[task.destination] = sd_root
             self.active_imports[sd_root] += 1
@@ -57,11 +59,7 @@ class ImportExecutor(daemons.abc.BaseQueueExecutor):
                 json.dump(transcode_request, sock_w)
             sock.shutdown(socket.SHUT_WR)
             with sock.makefile(mode="r") as sock_r:
-                try:
-                    response = json.load(sock_r)
-                    print(f"Transcoder response: {response}")
-                except Exception as e:
-                    print(f"Unhandled exception: {e}")
+                response = json.load(sock_r)
 
 class UploadExecutor(daemons.abc.BaseQueueExecutor):
     def __init__(self, job_queue, gdrive_client, remote_root_id, sources_root, report_addr, daemon):
@@ -78,12 +76,12 @@ class UploadExecutor(daemons.abc.BaseQueueExecutor):
         folder_id = self.gdrive_client.makedirs(
             local_dir, self.sources_root, self.remote_root_id, exist_ok=True
         )
-        print(f'Remote folder: {folder_id}')
-        """self.gdrive_client.upload_files(
+        logging.info('upload: local={} remote={}', local_path, folder_id)
+        self.gdrive_client.upload_files(
             [local_path], folder_id,
-            on_each=lambda x: print(f"on_each {x}"),
-            on_progress=lambda x: print(f"on_progress {x}")
-        )"""
+            on_each=lambda path: logging.info("upload finished: local={}", path),
+            on_progress=lambda progress: logging.info("upload progress: {}%", 100 * progress.progress())
+        )
         self._unregister_transcode_job(local_path)
 
     def _unregister_transcode_job(self, local_path):
@@ -105,4 +103,4 @@ class UploadExecutor(daemons.abc.BaseQueueExecutor):
             sock.shutdown(socket.SHUT_WR)
             with sock.makefile("r") as sock_r:
                 ans = json.load(sock_r)
-            print(f"Devwatch response: {ans}")
+            logging.info("Devwatch response: {}", ans)

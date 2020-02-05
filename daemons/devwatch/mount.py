@@ -1,7 +1,7 @@
 import hashlib
+import logging
 import os.path
 import subprocess
-from . import logger
 
 
 MOUNTPOINT_BASE = "/mnt"
@@ -19,20 +19,20 @@ def mount(device, path=None) -> str:
             pass
     
     cmdline = ["mount", device.device_node, path]
-    logger.debug("mount cmdline: {}".format(cmdline))
+    logging.debug("mount cmdline: {}".format(cmdline))
     try:
         subprocess.check_call(cmdline)
     except subprocess.CalledProcessError as e:
-        logger.exception(e)
+        logging.exception(e)
         return None
     else:
         return path
 
 def umount(path):
     cmdline = ["umount", path]
-    logger.debug("umount cmdline: {}".format(cmdline))
+    logging.debug("umount cmdline: {}".format(cmdline))
     try:
         subprocess.check_call(cmdline)
     except subprocess.CalledProcessError as e:
-        logger.exception(e)
+        logging.exception(e)
         raise RuntimeError("umount(8) failed") from e

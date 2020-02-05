@@ -23,5 +23,6 @@ def main(server_address, report_address):
         daemon.shutdown()
 
 if __name__ == '__main__':
+    logging.getLogger("root").setLevel(logging.INFO)
     Config.update("config.json")
     main(('127.0.0.1', 1337), ('127.0.0.1', 1338))

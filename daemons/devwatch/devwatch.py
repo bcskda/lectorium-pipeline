@@ -1,11 +1,11 @@
 import json
+import logging
 import pyudev
 import os.path
 import socket
 from typing import Callable, Dict
 import daemons.abc
 from .mount import mount, umount
-from . import logger
 
 
 class DevwatchRequestHandler(daemons.abc.DispatchedRequestHandler):
@@ -15,12 +15,11 @@ class DevwatchRequestHandler(daemons.abc.DispatchedRequestHandler):
     def on_import_result(self):
         req = self.request_obj["message"]
         mountpoint = req["path"]
-        logger.debug(self.server.daemon.active_devices)
+        logging.debug("active devices: {}", self.server.daemon.active_devices)
         by_mountpoint = {v: k for k, v in self.server.daemon.active_devices.items()}
-        logger.debug(by_mountpoint)
         device = by_mountpoint.get(mountpoint)
         if device:
-            logger.info(f"import finished: device={device} mountpoint={mountpoint}")
+            logging.info("import finished: device={} mountpoint={}", device, mountpoint)
             del self.server.daemon.active_devices[device]
             umount(mountpoint)
         else:
@@ -43,7 +42,7 @@ class DevwatchExecutor(daemons.abc.BaseLoopExecutor):
         super(DevwatchExecutor, self).__init__(self.event_poll, BlockingIOError)
 
     def handle_event(self, event):
-        logger.info(f"event: device={event.sys_path} action={event.action}")
+        logging.info("event: device={} action={}", event.sys_path, event.action)
         if self.event_filter and self.event_filter(event):
             try:
                 handler = self.action_dispatcher.get_handler(event.action)
@@ -64,7 +63,7 @@ class DevwatchExecutor(daemons.abc.BaseLoopExecutor):
         mountpoint = mount(event)
         if mountpoint:
             content = self._guess_content(mountpoint)
-            logger.info(f"device={event.sys_path} mountpoint={mountpoint} content={content}")
+            logging.info("device={} mountpoint={} content={}", event.sys_path, mountpoint, content)
             if content:
                 self.daemon.active_devices[event.sys_path] = mountpoint
                 self.import_queue.put({"path": mountpoint, "content": content})
@@ -75,7 +74,7 @@ class DevwatchExecutor(daemons.abc.BaseLoopExecutor):
     def on_remove(self, event):
         mountpoint = self.daemon.active_devices.get(event.sys_path)
         if mountpoint:
-            logger.warning(f"active device removed: device={event.sys_path} mountpoint={mountpoint}")
+            logging.warning("active device removed: device={} mountpoint={}", event.sys_path, mountpoint)
             umount(mountpoint)
             del self.daemon.active_devices[event.sys_path]
 
@@ -104,6 +103,6 @@ class ImportExecutor(daemons.abc.BaseQueueExecutor):
             with sock.makefile(mode="r") as sock_r:
                 try:
                     response = json.load(sock_r)
-                    logger.info(f"transcoder response: {response}")
+                    logging.info("transcoder response: {}", response)
                 except Exception as e:
-                    logger.exception(e)
+                    logging.exception(e)

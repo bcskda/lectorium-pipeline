@@ -25,6 +25,7 @@ def main(server_address, output_dir, drive_client, remote_root_id):
         daemon.shutdown()
 
 if __name__ == '__main__':
+    logging.getLogger("root").setLevel(logging.INFO)
     Config.update("config.json")
     drive_client = GDriveClient(Config)
     main(("127.0.0.1", 1338), "./output_dir/", drive_client, Config.root_id)

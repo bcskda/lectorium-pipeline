@@ -19,6 +19,7 @@ Output:
 """
 
 import json
+import logging
 import socket
 from typing import Dict
 from config import Config
@@ -68,7 +69,7 @@ class TranscodeExecutor(BaseQueueExecutor):
 
     def handle_job(self, job):
         with open(f"{job.outputs[0]}.transcode_log", "w") as stderr:
-            # transcode(job.profile, job.inputs, job.outputs, stderr=stderr)
+            transcode(job.profile, job.inputs, job.outputs, stderr=stderr)
             # TODO report progress
             self.report_queue.put(job.outputs)
 
@@ -78,7 +79,7 @@ class ResultReporter(BaseQueueExecutor):
         self.report_addr = report_addr
 
     def handle_job(self, job):
-        print(f"ResultReporter: finished {job}")
+        logging.info("ResultReporter: finished {}", job)
         message = {
             "message_type": "transcode_result",
             "message": {"outputs": job}
@@ -89,4 +90,4 @@ class ResultReporter(BaseQueueExecutor):
             sock.shutdown(socket.SHUT_WR)
             with sock.makefile("r") as sock_r:
                 ans = json.load(sock_r)
-            print(f"ResultReporter: remote answer: {ans}")
+            logging.info("ResultReporter: remote answer: {}", ans)
