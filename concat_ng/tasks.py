@@ -2,6 +2,7 @@
 
 import datetime
 import os
+import logging
 from collections import namedtuple
 from typing import List, Callable
 from concat_ng.probe import VideoFile, extract_groups, listdir_videos
@@ -27,13 +28,13 @@ def into_tasks(sd_root, storage_root) -> List[ConcatTask]:
         )
         concat_tasks.append(ConcatTask(group, destination))
 
-        print(f"=== Group for {destination!r} ===")
-        print(f"{'Name':10} {VideoFile.TIME_INFO_HEADER}")
+        logging.info(f"=== Group for {destination!r} ===")
+        logging.info(f"{'Name':10} {VideoFile.TIME_INFO_HEADER}")
         for vid in group:
-            print(f"{os.path.basename(vid.path):10} {vid.time_info_str()}")
+            logging.info(f"{os.path.basename(vid.path):10} {vid.time_info_str()}")
 
         if not all(date == vid.start_date.date() for vid in group):
-            print(f"Warning: not all videos in group have same record date ({date})")
+            logging.info(f"Warning: not all videos in group have same record date ({date})")
     
     return concat_tasks
 
@@ -50,11 +51,11 @@ def execute_from(args, transcode: Callable) -> List[str]:
     for sources, destination in concat_tasks:
         os.makedirs(os.path.dirname(destination), exist_ok=True)
         transcode([vid.path for vid in sources], destination)
-        print(f"Finished {destination} ({datetime.datetime.now()})")
+        logging.info(f"Finished {destination} ({datetime.datetime.now()})")
         outputs.append(destination)
 
-    print("All done, new files:")
+    logging.info("All done, new files:")
     for destination in outputs:
-        print(destination)
+        logging.info(destination)
 
     return outputs

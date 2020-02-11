@@ -19,7 +19,7 @@ def mount(device, path=None) -> str:
             pass
     
     cmdline = ["mount", device.device_node, path]
-    logging.debug("mount cmdline: {}".format(cmdline))
+    logging.debug("mount cmdline: %s".format(cmdline))
     try:
         subprocess.check_call(cmdline)
     except subprocess.CalledProcessError as e:
@@ -30,7 +30,7 @@ def mount(device, path=None) -> str:
 
 def umount(path):
     cmdline = ["umount", path]
-    logging.debug("umount cmdline: {}".format(cmdline))
+    logging.debug("umount cmdline: %s".format(cmdline))
     try:
         subprocess.check_call(cmdline)
     except subprocess.CalledProcessError as e:

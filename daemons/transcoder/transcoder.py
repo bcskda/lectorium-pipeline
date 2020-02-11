@@ -79,7 +79,7 @@ class ResultReporter(BaseQueueExecutor):
         self.report_addr = report_addr
 
     def handle_job(self, job):
-        logging.info("ResultReporter: finished {}", job)
+        logging.info("ResultReporter: finished %s", job)
         message = {
             "message_type": "transcode_result",
             "message": {"outputs": job}
@@ -90,4 +90,4 @@ class ResultReporter(BaseQueueExecutor):
             sock.shutdown(socket.SHUT_WR)
             with sock.makefile("r") as sock_r:
                 ans = json.load(sock_r)
-            logging.info("ResultReporter: remote answer: {}", ans)
+            logging.info("ResultReporter: remote answer: %s", ans)

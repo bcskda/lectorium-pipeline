@@ -1,4 +1,6 @@
+import argparse
 import logging
+import os
 import pyudev
 import signal
 import socketserver
@@ -15,28 +17,45 @@ def check_match(device):
         match = False
     return match
 
-def main(server_address, importer_address):
+def parse_args():
+    parser = argparse.ArgumentParser(description="Watch block devices to search and import sources")
+    parser.add_argument("--importer", required=True, help="Importer daemon address")
+    parser.add_argument("--bind", required=False, default="127.0.0.1:1339", help="Bind address")
+    parser.add_argument("--logfile", required=False, help="Path to log file (default - stderr)")
+    return parser.parse_args()
+
+def to_addr(url):
+    host, port = tuple(url.split(":"))
+    return host, int(port)
+
+def main(args):
+    bind_addr = to_addr(args.bind)
+    importer_addr = to_addr(args.importer)
     # TODO check mount privilege
+    
     daemon = JobQueueDaemon(["q_import"])
     udev_context = pyudev.Context()
     daemon.add_executor(None, DevwatchExecutor, udev_context,
                         daemon, daemon.job_queues["q_import"],
                         udev_filter="block", event_filter=check_match)
-    daemon.add_executor("q_import", ImportExecutor, importer_address)
-    daemon.add_server(socketserver.TCPServer(server_address, DevwatchRequestHandler))
-    daemon.start()
+    daemon.add_executor("q_import", ImportExecutor, importer_addr)
+    daemon.add_server(socketserver.TCPServer(bind_addr, DevwatchRequestHandler))
     
+    daemon.start()
+    logging.info("Started")
     try:
         sig = signal.sigwaitinfo({signal.SIGINT}) # TODO handle sigterm
     except KeyboardInterrupt:
         sig = signal.SIGINT
     finally:
         sig = signal.Signals(sig.si_signo)
-        logging.info("Shutting down after {}", sig.name)
+        logging.info("Shutting down after %s", sig.name)
         daemon.shutdown()
 
 if __name__ == "__main__":
-    logging.getLogger("root").setLevel(logging.INFO)
-    server_address = ("127.0.01", 1339)
-    importer_address = ("127.0.0.1", 1338)
-    main(server_address, importer_address)
+    args  = parse_args()
+    logfile = args.logfile or os.getenv("DEVWATCH_LOGFILE")
+    if logfile:
+        logging.basicConfig(filename=logfile)
+    logging.basicConfig(level=logging.INFO)
+    main(args)

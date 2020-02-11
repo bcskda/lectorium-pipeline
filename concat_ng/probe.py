@@ -2,6 +2,7 @@
 
 
 import os
+import logging
 import subprocess
 import datetime
 import json
@@ -85,6 +86,6 @@ def extract_groups(videos: List[VideoFile]) -> List[List[VideoFile]]:
     for group in groups:
         first = group[0]
         if first.start >= 0.5:
-            print(f"Warning: first group element ({first.path!r}) has large start ({first.start:.2f}), maybe change grouping strategy?")
+            logging.info(f"Warning: first group element ({first.path!r}) has large start ({first.start:.2f}), maybe change grouping strategy?")
 
     return groups

@@ -1,4 +1,5 @@
 import json
+import logging
 import os
 import subprocess
 import sys
@@ -41,7 +42,7 @@ def make_cmdline(inputs, outputs, profile_name):
 
 def transcode(profile, inputs, outputs, stderr=None) -> int:
     cmdline = make_cmdline(inputs, outputs, profile)
-    print(f'cmdline = {cmdline}', file=sys.stderr)
+    logging.debug("cmdline = %s", cmdline)
     result = subprocess.run(cmdline, stderr=stderr)
     return result.returncode
 

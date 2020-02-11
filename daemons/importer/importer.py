@@ -19,7 +19,7 @@ class ImportRequestHandler(daemons.abc.DispatchedRequestHandler):
     def handle_transcode_result(self):
         output_paths = self.request_obj["message"]["outputs"]
         for path in output_paths:
-            logging.info(f"Transcode finished: {path}")
+            logging.info("Transcode finished: %s", path)
             self.server.daemon.job_queues["q_upload"].put(path)
 
 class ImportExecutor(daemons.abc.BaseQueueExecutor):
@@ -40,7 +40,7 @@ class ImportExecutor(daemons.abc.BaseQueueExecutor):
             old_from = self.active_transcodes.get(task.destination)
             if old_from:
                 logging.warning(
-                    "transcode already in progress: from={} old_from={} output_file={}",
+                    "transcode already in progress: from=%s old_from=%s output_file=%s",
                     sd_root, old_from, task.destination)
                 continue
             self.active_transcodes[task.destination] = sd_root
@@ -76,11 +76,11 @@ class UploadExecutor(daemons.abc.BaseQueueExecutor):
         folder_id = self.gdrive_client.makedirs(
             local_dir, self.sources_root, self.remote_root_id, exist_ok=True
         )
-        logging.info('upload: local={} remote={}', local_path, folder_id)
+        logging.info('upload: local=%s remote=%s', local_path, folder_id)
         self.gdrive_client.upload_files(
             [local_path], folder_id,
-            on_each=lambda path: logging.info("upload finished: local={}", path),
-            on_progress=lambda progress: logging.info("upload progress: {}%", 100 * progress.progress())
+            on_each=lambda path: logging.info("upload finished: local=%s", path),
+            on_progress=lambda progress: logging.info("upload progress: %s%%", 100 * progress.progress())
         )
         self._unregister_transcode_job(local_path)
 
@@ -103,4 +103,4 @@ class UploadExecutor(daemons.abc.BaseQueueExecutor):
             sock.shutdown(socket.SHUT_WR)
             with sock.makefile("r") as sock_r:
                 ans = json.load(sock_r)
-            logging.info("Devwatch response: {}", ans)
+            logging.info("Devwatch response: %s", ans)
