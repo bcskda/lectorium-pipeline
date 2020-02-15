@@ -5,15 +5,15 @@
             "https://www.googleapis.com/auth/drive.metadata.readonly",
             "https://www.googleapis.com/auth/drive.file"
         ],
-        "root_id": "root",
+        "root_id": "1g21uxd-w86UlZcknC8qKwsatfixSj2dq",
         "token_file": "token.pickle",
         "credentials_file": "credentials.json"
     },
     "ffmpeg": {
         "general_options": [
-            "-hide_banner", "-loglevel", "warning"
+            "-hide_banner", "-loglevel", "info"
         ],
-        "default_profile": "concat_copy",
+        "default_profile": "concat_compress",
         "preset_dir": "ff_presets/v2"
     }
 }
