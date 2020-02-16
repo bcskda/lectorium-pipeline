@@ -4,3 +4,4 @@ google-auth-oauthlib
 httplib2==0.15.0
 progressbar2
 pyudev
+Django
