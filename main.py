@@ -2,12 +2,13 @@
 
 import argparse
 import functools
+import logging
 import os.path
 import sys
 import progressbar
 import concat_ng.tasks
 from config import Config
-from transcode import transcode
+from transcode_v2 import transcode
 from gdrive_client import GDriveClient
 
 def parse_cmdline():
@@ -43,6 +44,7 @@ class GDriveProgressSentry:
             self.next_file()
 
 def main():
+    logging.basicConfig(level=logging.INFO)
     args = parse_cmdline()
     Config.update(args.config)
 

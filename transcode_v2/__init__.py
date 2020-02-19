@@ -18,7 +18,7 @@ def get_preset(profile) -> Dict:
     except FileNotFoundError as e:
         raise TranscodeError(f"Bad profile: {profile}") from e
 
-def make_cmdline(inputs, outputs, profile_name):
+def make_cmdline(inputs, output, profile_name):
     profile = get_preset(profile_name)
     
     cmdline = ["ffmpeg"]
@@ -32,7 +32,8 @@ def make_cmdline(inputs, outputs, profile_name):
     if profile.get("filtergraph"):
         cmdline.extend(["-filter_complex", profile["filtergraph"]])
     
-    for sink, options in zip(outputs, profile["outputs"]):
+    for options in profile["outputs"]:
+        sink = output + options["suffix"]
         for input_node in options["input_nodes"]:
             cmdline.extend(["-map", input_node])
         cmdline.extend(options["codec_options"])
@@ -40,15 +41,13 @@ def make_cmdline(inputs, outputs, profile_name):
     
     return cmdline
 
-def transcode(profile, inputs, outputs, stderr=None) -> int:
-    cmdline = make_cmdline(inputs, outputs, profile)
-    logging.debug("cmdline = %s", cmdline)
+def transcode(profile, inputs, output, stderr=None) -> int:
+    cmdline = make_cmdline(inputs, output, profile)
+    logging.info("cmdline = %s", cmdline)
     result = subprocess.run(cmdline, stderr=stderr)
     return result.returncode
 
-def validate_args(inputs, outputs, profile_name):
+def validate_args(inputs, output, profile_name):
     profile = get_preset(profile_name)
     if len(inputs) != len(profile["inputs"]):
         raise TranscodeError("Expected {} inputs, got {}".format(len(profile["inputs"]), len(inputs)))
-    if len(outputs) != len(profile["outputs"]):
-        raise TranscodeError("Expected {} outputs, got {}".format(len(profile["outputs"]), len(outputs)))

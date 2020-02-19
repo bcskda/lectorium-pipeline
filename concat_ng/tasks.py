@@ -24,7 +24,7 @@ def into_tasks(sd_root, storage_root) -> List[ConcatTask]:
         destination = os.path.join(
             storage_root,
             f"{date:%Y.%m.%d} - {date.day} {month_names_ru[date.month - 1]}",
-            f"source_{group[0].start_date.time():%H_%M_%S}.mp4"
+            f"source_{group[0].start_date.time():%H_%M_%S}"
         )
         concat_tasks.append(ConcatTask(group, destination))
 
@@ -50,7 +50,7 @@ def execute_from(args, transcode: Callable) -> List[str]:
     outputs = []
     for sources, destination in concat_tasks:
         os.makedirs(os.path.dirname(destination), exist_ok=True)
-        transcode([vid.path for vid in sources], destination)
+        transcode([[vid.path for vid in sources]], destination)
         logging.info(f"Finished {destination} ({datetime.datetime.now()})")
         outputs.append(destination)
 
