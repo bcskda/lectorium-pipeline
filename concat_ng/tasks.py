@@ -50,12 +50,12 @@ def execute_from(args, transcode: Callable) -> List[str]:
     outputs = []
     for sources, destination in concat_tasks:
         os.makedirs(os.path.dirname(destination), exist_ok=True)
-        transcode([[vid.path for vid in sources]], destination)
+        exitcode, sinks = transcode([[vid.path for vid in sources]], destination)
         logging.info(f"Finished {destination} ({datetime.datetime.now()})")
-        outputs.append(destination)
+        outputs.extend(sinks)
 
     logging.info("All done, new files:")
-    for destination in outputs:
-        logging.info(destination)
+    for sinks in outputs:
+        logging.info(sinks)
 
     return outputs

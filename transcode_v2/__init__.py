@@ -3,7 +3,7 @@ import logging
 import os
 import subprocess
 import sys
-from typing import Dict
+from typing import Dict, List, Tuple
 from config import Config
 from transcode_v2.protocols import apply_protocol
 
@@ -18,7 +18,7 @@ def get_preset(profile) -> Dict:
     except FileNotFoundError as e:
         raise TranscodeError(f"Bad profile: {profile}") from e
 
-def make_cmdline(inputs, output, profile_name):
+def make_cmdline(inputs, output, profile_name) -> Tuple[List[str], List[str]]:
     profile = get_preset(profile_name)
     
     cmdline = ["ffmpeg"]
@@ -32,20 +32,22 @@ def make_cmdline(inputs, output, profile_name):
     if profile.get("filtergraph"):
         cmdline.extend(["-filter_complex", profile["filtergraph"]])
     
+    sinks = []
     for options in profile["outputs"]:
         sink = output + options["suffix"]
+        sinks.append(sink)
         for input_node in options["input_nodes"]:
             cmdline.extend(["-map", input_node])
         cmdline.extend(options["codec_options"])
         cmdline.append(sink)
     
-    return cmdline
+    return cmdline, sinks
 
-def transcode(profile, inputs, output, stderr=None) -> int:
-    cmdline = make_cmdline(inputs, output, profile)
+def transcode(profile, inputs, output, stderr=None) -> Tuple[int, List[str]]:
+    cmdline, sinks = make_cmdline(inputs, output, profile)
     logging.info("cmdline = %s", cmdline)
     result = subprocess.run(cmdline, stderr=stderr)
-    return result.returncode
+    return result.returncode, sinks
 
 def validate_args(inputs, output, profile_name):
     profile = get_preset(profile_name)
