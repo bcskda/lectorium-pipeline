@@ -31,7 +31,9 @@ ALLOWED_HOSTS = ['localhost']
 # Application definition
 
 INSTALLED_APPS = [
-    'pipeline_panel.apps.PipelineConfig',
+    'pipeline_common.apps.PipelineCommonConfig',
+    'pipeline_imports.apps.PipelineImportsConfig',
+    'pipeline_panel.apps.PipelinePanelConfig',
     'django.contrib.admin',
     'django.contrib.auth',
     'django.contrib.contenttypes',

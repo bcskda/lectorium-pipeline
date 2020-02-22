@@ -1,5 +1,5 @@
 from django.apps import AppConfig
 
 
-class PipelineConfig(AppConfig):
+class PipelinePanelConfig(AppConfig):
     name = 'pipeline_panel'

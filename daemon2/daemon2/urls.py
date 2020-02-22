@@ -18,5 +18,6 @@ from django.urls import include, path
 
 urlpatterns = [
     path('admin/', admin.site.urls),
-    path('pipeline/', include('pipeline.urls')),
+    path('pipeline/panel/', include('pipeline_panel.urls')),
+    path('pipeline/imports/', include('pipeline_imports.urls')),
 ]

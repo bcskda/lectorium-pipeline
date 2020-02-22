@@ -12,7 +12,8 @@ class ExportDestination(models.Model):
 
 
 class BaseRequest(models.Model):
-    start_dttm = models.DateTimeField()
+    create_dttm = models.DateTimeField(auto_now_add=True)
+    start_dttm = models.DateTimeField(null=True)
     finish_dttm = models.DateTimeField(null=True)
     is_approved = models.BooleanField(default=False)
     is_finish_confirmed = models.BooleanField(default=False)

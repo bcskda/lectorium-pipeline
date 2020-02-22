@@ -1,0 +1,9 @@
+{% if latest_imports %}
+    <ul>
+    {% for imp in latest_imports %}
+        <li><a href="{% url 'pipeline_imports:detail' imp.id %}">{{ imp.sdroot_path_txt }}</a></li>
+    {% endfor %}
+    </ul>
+{% else %}
+    <p>No imports yet.</p>
+{% endif %}
