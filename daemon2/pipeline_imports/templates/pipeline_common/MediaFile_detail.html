@@ -1,0 +1,15 @@
+{% if error_message %}<p><strong>{{ error_message }}</strong></p>{% endif %}
+
+<table style="border: 1px solid black; border-collapse: collapse;">
+    <tr><th colspan="2">MediaFile #{{ mediafile.id }}</th></tr>
+    <tr><td>Transcode request</td>
+        <td><samp>#{{ mediafile.transcode_request.id }}</samp></td></tr>
+    <tr><td>Role</td>
+        <td><samp>{{ mediafile.role.role_nm }} {% if mediafile.order_n is not None %} #{{ mediafile.order_n }} {% endif %}</samp></td></tr>
+    <tr><td>Start</td>
+        <td><samp>{{ mediafile.modification_dttm }}</samp></td></tr>
+    <tr><td>Duration</td>
+        <td><samp>{{ mediafile.duration_sec }} sec</samp></td></tr>
+    <tr><td>Path</td>
+        <td><samp>{{ mediafile.path_txt }}</samp></td></tr>
+</table>

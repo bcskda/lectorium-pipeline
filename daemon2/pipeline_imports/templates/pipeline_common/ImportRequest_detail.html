@@ -1,0 +1,8 @@
+{% if error_message %}<p><strong>{{ error_message }}</strong></p>{% endif %}
+
+Created: <samp>{{ importrequest.create_dttm }}</samp>
+<br>SD mountpoint: <samp>{{ importrequest.sdroot_path_txt }}</samp>
+<br>Transcode requests:
+<ul>{% for transcoderequest in importrequest.transcoderequest_set.all %}
+    {% include 'pipeline_common/TranscodeRequest_detail.html' with transcoderequest=transcoderequest %}
+{% endfor %}</ul>

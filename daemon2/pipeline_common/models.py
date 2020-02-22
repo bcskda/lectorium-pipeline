@@ -1,6 +1,7 @@
 from django.db import models
 from .utils.probe import VideoFile
 
+
 class ExportProto(models.Model):
     proto_nm = models.CharField(max_length=20)
 

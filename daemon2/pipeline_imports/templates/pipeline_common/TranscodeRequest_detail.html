@@ -1,0 +1,13 @@
+{% if error_message %}<p><strong>{{ error_message }}</strong></p>{% endif %}
+
+<table style="border: 1px solid black; border-collapse: collapse;">
+    <tr><th colspan="2">TranscodeRequest #{{ transcoderequest.id }}</th></tr>
+    <tr><td>Created</td>
+        <td>{{ transcoderequest.create_dttm }}</td></tr>
+    <tr><td>Approved</td>
+        <td>{{ transcoderequest.is_approved }}</td></tr>
+    <tr><td>MediaFiles</td>
+        <td>{% for mediafile in transcoderequest.mediafile_set.all %}
+                {% include 'pipeline_common\MediaFile_detail.html' with mediafile=mediafile %}
+            {% endfor %}</td></tr>
+</table>
