@@ -1,3 +1,18 @@
+{% if error_message %}<p><strong>{{ error_message }}</strong></p>{% endif %}
+
 Created: <samp>{{ importrequest.create_dttm }}</samp>
-<br>
-SD mountpoint: <samp>{{ importrequest.sdroot_path_txt }}</samp>
+<br>SD mountpoint: <samp>{{ importrequest.sdroot_path_txt }}</samp>
+<br>Transcode requests:
+<ul>{% for treq in importrequest.transcoderequest_set.all %}
+    <li>Created: {{ treq.create_dttm }}
+    <ul>{% for mfile in treq.mediafile_set.all %}
+        <li>
+        {{ mfile.role.role_nm }}
+        {% if mfile.order_n is not None %}
+            ({{ mfile.order_n }})
+        {% endif %}
+        - {{ mfile.path_txt }}
+        </li>
+    {% endfor %}</ul>
+    </li>
+{% endfor %}</ul>
