@@ -7,6 +7,10 @@
 ```bash
 $ # Clone
 $ git clone https://github.com/bcskda/lectorium-pipeline
+$ cd lectorium-pipeline
+$ # Secrets
+$ mkdir __secret
+$ # mv ~/credentials.json __secret
 $ # Env
 $ python3 -m venv .venv
 $ source .venv/bin/activate
