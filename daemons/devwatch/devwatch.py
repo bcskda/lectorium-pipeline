@@ -21,7 +21,7 @@ class DevwatchRequestHandler(daemons.abc.DispatchedRequestHandler):
         if device:
             logging.info("import finished: device=%s mountpoint=%s", device, mountpoint)
             del self.server.daemon.active_devices[device]
-            umount(mountpoint)
+            # umount(mountpoint)
         else:
             self.error("Device not active")
 
@@ -75,7 +75,7 @@ class DevwatchExecutor(daemons.abc.BaseLoopExecutor):
         mountpoint = self.daemon.active_devices.get(event.sys_path)
         if mountpoint:
             logging.warning("active device removed: device=%s mountpoint=%s", event.sys_path, mountpoint)
-            umount(mountpoint)
+            # umount(mountpoint)
             del self.daemon.active_devices[event.sys_path]
 
     def _guess_content(self, path: str) -> str or None:

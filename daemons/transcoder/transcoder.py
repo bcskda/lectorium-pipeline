@@ -7,9 +7,7 @@ Example:
     "inputs": [
         ["input_dir/PRIVATE/AVCHD/BDMV/STREAM/00000.MTS"]
     ],
-    "outputs": [
-        "output_dir/00000.mp4"
-    ],
+    "output": "output_dir/00000.mp4",
     "profile": "concat_copy"
 }]
 _DOC
@@ -53,14 +51,14 @@ class TranscodeJob:
     def __init__(self, job: Dict):
         try:
             self.inputs = job["inputs"]
-            self.outputs = job["outputs"]
+            self.output = job["output"]
             self.profile = job["profile"]
         except TypeError as e:
             raise TranscodeError(f"Bad arguments types: {e}") from e
         except KeyError as e:
             raise TranscodeError(f"Missing argument: {e}") from e
         
-        validate_args(self.inputs, self.outputs, self.profile)
+        validate_args(self.inputs, self.output, self.profile)
 
 class TranscodeExecutor(BaseQueueExecutor):
     def __init__(self, job_queue, report_queue):
@@ -68,8 +66,8 @@ class TranscodeExecutor(BaseQueueExecutor):
         self.report_queue = report_queue
 
     def handle_job(self, job):
-        with open(f"{job.outputs[0]}.transcode_log", "w") as stderr:
-            transcode(job.profile, job.inputs, job.outputs, stderr=stderr)
+        with open(f"{job.output}.transcode_log", "w") as stderr:
+            exitcode, outputs = transcode(job.profile, job.inputs, job.output, stderr=stderr)
             # TODO report progress
             self.report_queue.put(job.outputs)
 

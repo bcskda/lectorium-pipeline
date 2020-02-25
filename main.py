@@ -16,7 +16,7 @@ def parse_cmdline():
     parser.add_argument("-i", "--input", required=True, help="Path to sd card root")
     parser.add_argument("-o", "--output", required=True, help="Path to lectorium folder root")
     parser.add_argument("-p", "--profile", required=False, help="Trancoding profile to use")
-    parser.add_argument("-c", "--config", required=False, default="config.json", help="Path to configuration")
+    parser.add_argument("-c", "--config", required=False, default="config_default.json", help="Path to configuration")
     parser.add_argument("-u", "--upload", required=False, action='store_true', help="Upload output to Google Drive")
     parser.add_argument("--folder-id", required=False, dest="gdrive_parent", help="ID of Google Drive destination folder")
     

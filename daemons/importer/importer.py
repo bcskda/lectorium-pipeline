@@ -48,7 +48,7 @@ class ImportExecutor(daemons.abc.BaseQueueExecutor):
             os.makedirs(os.path.dirname(task.destination), exist_ok=True)
             transcode_request.append({
                 "inputs": [[f.path for f in task.sources]],
-                "outputs": [task.destination],
+                "output": task.destination,
                 "profile": Config.ff_default_profile
             })
         self._send_transcode_request(transcode_request)
