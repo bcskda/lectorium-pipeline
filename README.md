@@ -33,7 +33,7 @@ $ source .venv/bin/activate
 - ```-u / --upload``` - загружать результаты в облако (по умолчанию: нет)
 - ```--folder-id``` - ID папки в google drive, куда будут загружены результаты
 
-Можно посмотреть вывод ```python main.py --help``` и подкрутить ```config_default.json```
+Можно посмотреть вывод ```python main.py --help``` и подкрутить [конфиг](config_default.json)
 
 Профили хранятся в ```ff_presets/v2/PROFILE_NAME.json```
 
@@ -50,6 +50,8 @@ $ source .venv/bin/activate
 - - Поддержка filter_complex и объявленных фильтрами pad-ов в качестве входов
 
 Сейчас профиля два: склейка со сжатием и без
+
+Для примера см. [concat_compess](ff_presets/v2/concat_compress.json)
 
 #### Что плохого
 
@@ -76,6 +78,10 @@ $ source .venv/bin/activate
 (shell 2) python -m daemons.importer --transcoder 127.0.0.1:1337 --devwatch 127.0.0.1:1339 --bind 127.0.0.1:1338
 (shell 3) python -m daemons.devwatch --importer 127.0.0.1:1338 --bind 127.0.0.1:1339
 ```
+
+При запуске *daemons.importer* в логе будут мусорные INFO-записи от google-api-python-client, к сожалению, это нормально.
+
+Также см. [скриншоты](docs/daemons)
 
 Типичное завершение: Ctrl+C вызовет обработчик. Если в это время происходил импорт - undefined behavior.
 
