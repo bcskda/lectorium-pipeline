@@ -6,30 +6,14 @@
   ],
   "outputs": [
     {
-      "input_nodes": ["0:0", "[SndMainMp3]", "[SndMainAac]"],
+      "input_nodes": ["0:0", "0:1", "0:1"],
       "codec_options": [
-        "-c:v", "copy"
-        "-c:a:0", "mp3", "-ab", "384K",
+        "-c:v", "copy",
+        "-c:a:0", "mp3", "-ab", "320K",
         "-c:a:1", "aac", "-ab", "384K"
       ],
       "suffix": ".mp4"
-    },
-    {
-      "input_nodes": ["[SndFbMp3]"],
-      "codec_options": [
-        "-c:a", "mp3", "-ab", "384K"
-      ],
-      "base": 0,
-      "suffix": "_snd_fallback.mp3"
-    },
-    {
-      "input_nodes": ["[SndFbAac]"],
-      "codec_options": [
-        "-c:a", "aac", "-ab", "384K"
-      ],
-      "base": 0,
-      "suffix": "_snd_fallback.aac"
     }
   ],
-  "filtergraph": "channelsplit=channel_layout=stereo[SndMain][SndFb]; [SndMain]asplit=2[SndMainMp3][SndMainAac]; [SndFb]asplit=2[SndFbMp3][SndFbAac]"
+  "filtergraph": null
 }
