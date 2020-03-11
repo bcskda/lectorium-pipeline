@@ -10,6 +10,9 @@ from concat_ng.probe import VideoFile, extract_groups, listdir_videos
 
 ConcatTask = namedtuple("ConcatTask", ["sources", "destination"])
 
+# TODO by-date task indices
+g_task_index = 0
+
 def into_tasks(sd_root, storage_root) -> List[ConcatTask]:
     raw_sources_path = os.path.join(sd_root, "PRIVATE", "AVCHD", "BDMV", "STREAM")
     groups = extract_groups(listdir_videos(raw_sources_path))
@@ -18,14 +21,17 @@ def into_tasks(sd_root, storage_root) -> List[ConcatTask]:
     
     concat_tasks = []
     
-    for i, group in enumerate(groups):
+    for group in groups:
         date = group[0].start_date.date()
 
+        global g_task_index
         destination = os.path.join(
             storage_root,
             f"{date:%Y.%m.%d} - {date.day} {month_names_ru[date.month - 1]}",
-            f"source_{group[0].start_date.time():%H_%M_%S}"
+            f"#{g_task_index:02}-{group[0].start_date.time():%H_%M_%S}",
+            f"source"
         )
+        g_task_index += 1
         concat_tasks.append(ConcatTask(group, destination))
 
         logging.info(f"=== Group for {destination!r} ===")
