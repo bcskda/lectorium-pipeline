@@ -10,7 +10,7 @@ from .devwatch import DevwatchExecutor, DevwatchRequestHandler, ImportExecutor
 def check_match(device):
     try:
         match = all([
-            device["DEVTYPE"] == "partition"
+            device.properties["DEVTYPE"] == "partition"
             # TODO check properties of Reader(SD1, ..., SDn)
         ])
     except KeyError:
