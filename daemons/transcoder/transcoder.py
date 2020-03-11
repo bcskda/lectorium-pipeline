@@ -69,7 +69,7 @@ class TranscodeExecutor(BaseQueueExecutor):
         with open(f"{job.output}.transcode_log", "w") as stderr:
             exitcode, outputs = transcode(job.profile, job.inputs, job.output, stderr=stderr)
             # TODO report progress
-            self.report_queue.put(job.outputs)
+            self.report_queue.put({"output_base": job.output, "outputs": outputs})
 
 class ResultReporter(BaseQueueExecutor):
     def __init__(self, job_queue, report_addr):
@@ -80,7 +80,7 @@ class ResultReporter(BaseQueueExecutor):
         logging.info("ResultReporter: finished %s", job)
         message = {
             "message_type": "transcode_result",
-            "message": {"outputs": job}
+            "message": {"output_base": job["output_base"], "outputs": job["outputs"]}
         }
         with socket.create_connection(self.report_addr) as sock:
             with sock.makefile("w") as sock_w:

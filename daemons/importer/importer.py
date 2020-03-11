@@ -17,10 +17,10 @@ class ImportRequestHandler(daemons.abc.DispatchedRequestHandler):
 
     @mesg_dispatcher.add_handler("transcode_result")
     def handle_transcode_result(self):
-        output_paths = self.request_obj["message"]["outputs"]
-        for path in output_paths:
-            logging.info("Transcode finished: %s", path)
-            self.server.daemon.job_queues["q_upload"].put(path)
+        base = self.request_obj["message"]["output_base"]
+        outputs = self.request_obj["message"]["outputs"]
+        logging.info("Transcode finished: %s", base)
+        self.server.daemon.job_queues["q_upload"].put((base, outputs))
 
 class ImportExecutor(daemons.abc.BaseQueueExecutor):
     def __init__(self, job_queue, output_dir, transcoder_address, daemon):
@@ -71,26 +71,29 @@ class UploadExecutor(daemons.abc.BaseQueueExecutor):
         self.active_imports = daemon.active_imports
         self.active_transcodes = daemon.active_transcodes
 
-    def handle_job(self, local_path: str):
-        local_dir = os.path.dirname(local_path)
+    def handle_job(self, job):
+        base_path, outputs = job
+        local_dir = os.path.dirname(base_path)
         folder_id = self.gdrive_client.makedirs(
             local_dir, self.sources_root, self.remote_root_id, exist_ok=True
         )
-        logging.info('upload: local=%s remote=%s', local_path, folder_id)
+        logging.info('upload: local=%s remote=%s', base_path, folder_id)
         self.gdrive_client.upload_files(
-            [local_path], folder_id,
+            outputs, folder_id,
             on_each=lambda path: logging.info("upload finished: local=%s", path),
             on_progress=lambda progress: logging.info("upload progress: %s%%", 100 * progress.progress())
         )
-        self._unregister_transcode_job(local_path)
+        self._unregister_transcode_job(base_path)
 
-    def _unregister_transcode_job(self, local_path):
-        sd_root = self.active_transcodes.pop(local_path)
+    def _unregister_transcode_job(self, base_path):
+        sd_root = self.active_transcodes.pop(base_path)
         if self.active_imports[sd_root] == 1:
             del self.active_imports[sd_root]
             self._report_import_finish(sd_root)
         else:
             self.active_imports[sd_root] -= 1
+        print('! ' + f'active_transcodes: {self.active_transcodes}')
+        print('! ' + f'active_imports: {self.active_imports}')
     
     def _report_import_finish(self, sd_root):
         message = {
