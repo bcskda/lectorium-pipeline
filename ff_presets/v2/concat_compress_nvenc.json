@@ -1,0 +1,19 @@
+{
+  "inputs": [
+    {
+      "proto": "concat"
+    }
+  ],
+  "outputs": [
+    {
+      "input_nodes": ["0:0", "0:1", "0:1"],
+      "codec_options": [
+        "-c:v", "h264_nvenc", "-b:v", "3M", "-profile:v", "high", "-temporal-aq", "1",
+        "-c:a:0", "mp3", "-ab", "320K",
+        "-c:a:1", "aac", "-ab", "384K"
+      ],
+      "suffix": ".mp4"
+    }
+  ],
+  "filtergraph": null
+}

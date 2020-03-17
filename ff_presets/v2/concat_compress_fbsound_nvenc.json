@@ -1,0 +1,35 @@
+{
+  "inputs": [
+    {
+      "proto": "concat"
+    }
+  ],
+  "outputs": [
+    {
+      "input_nodes": ["0:0", "[SndMainMp3]", "[SndMainAac]"],
+      "codec_options": [
+        "-c:v", "h264_nvenc", "-b:v", "3M", "-profile:v", "high", "-temporal-aq", "1",
+        "-c:a:0", "mp3", "-ab", "320K",
+        "-c:a:1", "aac", "-ab", "384K"
+      ],
+      "suffix": ".mp4"
+    },
+    {
+      "input_nodes": ["[SndFbMp3]"],
+      "codec_options": [
+        "-c:a", "mp3", "-ab", "320K"
+      ],
+      "base": 0,
+      "suffix": "_snd_fallback.mp3"
+    },
+    {
+      "input_nodes": ["[SndFbAac]"],
+      "codec_options": [
+        "-c:a", "aac", "-ab", "384K"
+      ],
+      "base": 0,
+      "suffix": "_snd_fallback.aac"
+    }
+  ],
+  "filtergraph": "channelsplit=channel_layout=stereo[SndMain][SndFb]; [SndMain]asplit=2[SndMainMp3FL][SndMainAacFL]; [SndFb]asplit=2[SndFbMp3FR][SndFbAacFR]; [SndMainMp3FL]channelmap=FL[SndMainMp3]; [SndMainAacFL]channelmap=FL[SndMainAac]; [SndFbMp3FR]channelmap=FL[SndFbMp3]; [SndFbAacFR]channelmap=FL[SndFbAac]"
+}
