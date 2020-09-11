@@ -24,12 +24,12 @@ def parse_cmdline():
 
 class GDriveProgressSentry:
     def __init__(self, files):
-        self.files = files
+        self.files = functools.reduce(lambda flat, x: flat + x, files.values())
         self.index = 0
         self.next_file()
     
     def next_file(self):
-        print("Uploading {}".format(self.files[self.index]))
+        logging.info("Uploading {}".format(self.files[self.index]))
         self.bar = progressbar.ProgressBar(widgets=[progressbar.Percentage()], max_value=100.0).start()
         self.bar.update(0)
     
@@ -38,10 +38,27 @@ class GDriveProgressSentry:
     
     def on_each(self, finished_file):
         self.bar.finish()
-        print(f"Upload finished: {finished_file}")
+        logging.info(f"Upload finished: {finished_file}")
         self.index += 1
         if self.index < len(self.files):
             self.next_file()
+
+class Uploader:
+    def __init__(self, cmdline):
+        self.gdrive_client = GDriveClient(Config)
+        root_id = args.gdrive_parent or Config.root_id
+
+    def upload(self, outputs: Dict[str, List[str]]):
+        progress_sentry = GDriveProgressSentry(outputs)
+        for group_label, entries in outputs.items():
+            local_dir = os.path.dirname(group_label)
+            folder_id = self.gdrive_client.makedirs(
+                local_dir, args.output, root_id, exist_ok=True
+            )
+            self.gdrive_client.upload_files(entries, folder_id,
+                on_progress=progress_sentry.on_progress,
+                on_each=progress_sentry.on_each
+            )
 
 def main():
     logging.basicConfig(level=logging.INFO)
@@ -49,17 +66,10 @@ def main():
     Config.update(args.config)
 
     transcoder = functools.partial(transcode, args.profile or Config.ff_default_profile, stderr=sys.stderr)
-    outputs = concat_ng.tasks.execute_from(args, transcoder)
-    
+    outputs = concat_ng.tasks.execute_from_v2(args, transcoder)
     if args.upload:
-        gdrive_client = GDriveClient(Config)
-        parent = args.gdrive_parent or Config.root_id
-        
-        progress_sentry = GDriveProgressSentry(outputs)
-        gdrive_client.upload_files(outputs, parent,
-            on_progress=progress_sentry.on_progress,
-            on_each=progress_sentry.on_each
-        )
+        uploader = Uploader(args)
+        uploader.upload(outputs)
 
 if __name__ == "__main__":
     main()
