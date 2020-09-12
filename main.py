@@ -7,6 +7,7 @@ import os.path
 import sys
 import progressbar
 import concat_ng.tasks
+from typing import List, Dict
 from config import Config
 from transcode_v2 import transcode
 from gdrive_client import GDriveClient
@@ -46,14 +47,15 @@ class GDriveProgressSentry:
 class Uploader:
     def __init__(self, cmdline):
         self.gdrive_client = GDriveClient(Config)
-        root_id = args.gdrive_parent or Config.root_id
+        self.output_dir = cmdline.output
+        self.root_id = cmdline.gdrive_parent or Config.root_id
 
     def upload(self, outputs: Dict[str, List[str]]):
         progress_sentry = GDriveProgressSentry(outputs)
         for group_label, entries in outputs.items():
             local_dir = os.path.dirname(group_label)
             folder_id = self.gdrive_client.makedirs(
-                local_dir, args.output, root_id, exist_ok=True
+                local_dir, self.output_dir, self.root_id, exist_ok=True
             )
             self.gdrive_client.upload_files(entries, folder_id,
                 on_progress=progress_sentry.on_progress,
